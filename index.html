@@ -352,6 +352,71 @@
             color: #333;
         }
 
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 5px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #333;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 40px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .page-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .page-btn.active {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-btn:disabled:hover {
+            background: white;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-size-selector select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -379,6 +444,16 @@
 
             th, td {
                 padding: 8px 5px;
+            }
+            
+            .pagination-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
             }
         }
     </style>
@@ -449,6 +524,23 @@
                 </tbody>
             </table>
         </div>
+
+        <div id="paginationContainer" class="pagination-container" style="display: none;">
+            <div class="pagination-info">
+                Menampilkan <span id="startRecord">0</span> - <span id="endRecord">0</span> dari <span id="totalRecords">0</span> data
+            </div>
+            <div class="page-size-selector">
+                <label for="pageSize">Tampilkan:</label>
+                <select id="pageSize" onchange="changePageSize()">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="pagination" id="pagination">
+            </div>
+        </div>
     </div>
 
     <!-- Modal Detail -->
@@ -469,6 +561,8 @@
         
         let allData = [];
         let filteredData = [];
+        let currentPage = 1;
+        let pageSize = 25;
 
         // Format date function
         function formatDate(dateString) {
@@ -504,15 +598,18 @@
                 });
             }
             
+            currentPage = 1; // Reset to first page when searching
             displayData(filteredData);
         });
 
         async function loadData() {
             const loadingContainer = document.getElementById('loadingContainer');
             const tableContainer = document.getElementById('tableContainer');
+            const paginationContainer = document.getElementById('paginationContainer');
             
             loadingContainer.style.display = 'block';
             tableContainer.style.display = 'none';
+            paginationContainer.style.display = 'none';
             
             try {
                 const response = await fetch(SCRIPT_URL);
@@ -521,10 +618,12 @@
                 if (data.status === 'success') {
                     allData = data.data;
                     filteredData = [...allData];
+                    currentPage = 1; // Reset to first page when loading new data
                     displayData(filteredData);
                     
                     loadingContainer.style.display = 'none';
                     tableContainer.style.display = 'block';
+                    paginationContainer.style.display = 'flex';
                 } else {
                     throw new Error(data.message || 'Gagal memuat data');
                 }
@@ -544,18 +643,33 @@
             const tbody = document.getElementById('dataTableBody');
             const totalDataEl = document.getElementById('totalData');
             const filteredDataEl = document.getElementById('filteredData');
+            const paginationContainer = document.getElementById('paginationContainer');
             
             totalDataEl.textContent = allData.length;
             filteredDataEl.textContent = data.length;
             
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="29" class="no-data">Tidak ada data ditemukan</td></tr>';
+                paginationContainer.style.display = 'none';
                 return;
             }
             
+            // Calculate pagination
+            const totalPages = Math.ceil(data.length / pageSize);
+            const startRecord = (currentPage - 1) * pageSize + 1;
+            const endRecord = Math.min(currentPage * pageSize, data.length);
+            
+            // Update pagination info
+            document.getElementById('startRecord').textContent = startRecord;
+            document.getElementById('endRecord').textContent = endRecord;
+            document.getElementById('totalRecords').textContent = data.length;
+            
+            // Get data for current page
+            const pageData = data.slice(startRecord - 1, endRecord);
+            
             tbody.innerHTML = '';
             
-            data.forEach((row, index) => {
+            pageData.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 const ktpLink = row[13] ? `<a href="${row[13]}" target="_blank" style="color: #667eea; text-decoration: underline;">Lihat KTP</a>` : '-';
                 
@@ -563,7 +677,7 @@
                 const tanggalLahir = formatDate(row[4]);
                 
                 tr.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td>${startRecord + index}</td>
                     <td>${row[0]}</td>
                     <td>${row[1]}</td>
                     <td>${row[2]}</td>
@@ -592,16 +706,118 @@
                     <td>${row[25]}</td>
                     <td>${row[26]}</td>
                     <td class="action-buttons">
-                        <button class="btn-view" onclick="viewDetail(${index})">👁️ Lihat</button>
-                        <button class="btn-delete" onclick="deleteData(${index})">🗑️ Hapus</button>
+                        <button class="btn-view" onclick="viewDetail(${startRecord + index - 1})">👁️ Lihat</button>
+                        <button class="btn-delete" onclick="deleteData(${startRecord + index - 1})">🗑️ Hapus</button>
                     </td>
                 `;
                 
                 tbody.appendChild(tr);
             });
+            
+            // Render pagination
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.textContent = '‹';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayData(filteredData);
+                }
+            };
+            pagination.appendChild(prevBtn);
+            
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.className = 'page-btn';
+                firstBtn.textContent = '1';
+                firstBtn.onclick = () => {
+                    currentPage = 1;
+                    displayData(filteredData);
+                };
+                pagination.appendChild(firstBtn);
+                
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'page-btn';
+                    ellipsis.textContent = '...';
+                    ellipsis.style.cursor = 'default';
+                    pagination.appendChild(ellipsis);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn';
+                if (i === currentPage) {
+                    pageBtn.classList.add('active');
+                }
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    displayData(filteredData);
+                };
+                pagination.appendChild(pageBtn);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'page-btn';
+                    ellipsis.textContent = '...';
+                    ellipsis.style.cursor = 'default';
+                    pagination.appendChild(ellipsis);
+                }
+                
+                const lastBtn = document.createElement('button');
+                lastBtn.className = 'page-btn';
+                lastBtn.textContent = totalPages;
+                lastBtn.onclick = () => {
+                    currentPage = totalPages;
+                    displayData(filteredData);
+                };
+                pagination.appendChild(lastBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.textContent = '›';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayData(filteredData);
+                }
+            };
+            pagination.appendChild(nextBtn);
+        }
+
+        function changePageSize() {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 1; // Reset to first page when changing page size
+            displayData(filteredData);
         }
 
         function viewDetail(index) {
+            // Get the actual data index from filteredData
             const row = filteredData[index];
             const modalBody = document.getElementById('modalBody');
             
