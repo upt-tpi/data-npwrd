@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Pendaftaran Retribusi Daerah</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header h2 {
+            font-size: 20px;
+            font-weight: normal;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-export {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #218838;
+        }
+
+        .data-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        tr:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        tr:nth-child(even):hover {
+            background: #f0f2f5;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .btn-view {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-view:hover {
+            background: #138496;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            margin: 50px auto;
+            padding: 0;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close:hover {
+            transform: scale(1.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .detail-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-group h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .detail-item {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .data-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .detail-item {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+
+            table {
+                font-size: 11px;
+            }
+
+            th, td {
+                padding: 8px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PEMERINTAH KABUPATEN REMBANG</h1>
+            <h2>DATA PENDAFTARAN WAJIB RETRIBUSI DAERAH</h2>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Cari berdasarkan NIK, Nama, atau TPI...">
+            </div>
+            <div class="data-info">
+                <span>Total Data: <strong id="totalData">0</strong></span>
+                <span>Ditampilkan: <strong id="filteredData">0</strong></span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-export" onclick="exportToExcel()">📥 Export Excel</button>
+                <button class="btn btn-refresh" onclick="loadData()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div id="successMessage" class="success-message"></div>
+
+        <div id="loadingContainer" class="loading">
+            Memuat data
+        </div>
+
+        <div id="tableContainer" class="table-container" style="display: none;">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Timestamp</th>
+                        <th>NIK</th>
+                        <th>Nama</th>
+                        <th>Tempat Lahir</th>
+                        <th>Tanggal Lahir</th>
+                        <th>Jenis Kelamin</th>
+                        <th>Alamat</th>
+                        <th>RT</th>
+                        <th>RW</th>
+                        <th>Kelurahan</th>
+                        <th>Kecamatan</th>
+                        <th>Kabupaten</th>
+                        <th>Telepon</th>
+                        <th>Link KTP</th>
+                        <th>Jenis Permohonan</th>
+                        <th>Nama Usaha</th>
+                        <th>TPI</th>
+                        <th>Alamat Usaha</th>
+                        <th>RT Usaha</th>
+                        <th>RW Usaha</th>
+                        <th>Kelurahan Usaha</th>
+                        <th>Kecamatan Usaha</th>
+                        <th>Kabupaten Usaha</th>
+                        <th>Telepon Usaha</th>
+                        <th>Jenis Izin</th>
+                        <th>Jenis Usaha</th>
+                        <th>Kewajiban Retribusi</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Detail -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Detail Data Pendaftaran</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA (UNTUK READ)
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzq2N1N-flfUxDBHcQtEYlWhCDZh4hYu178XTM7oCM7wwsXGz12jpxdmakNghc1M8B2/exec';
+        
+        let allData = [];
+        let filteredData = [];
+
+        // Format date function
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            
+            // Check if it's ISO format
+            if (dateString.includes('T') && dateString.includes('Z')) {
+                const date = new Date(dateString);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+            
+            // If already formatted, return as is
+            return dateString;
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...allData];
+            } else {
+                filteredData = allData.filter(row => {
+                    return row.some(cell => 
+                        cell.toString().toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+            
+            displayData(filteredData);
+        });
+
+        async function loadData() {
+            const loadingContainer = document.getElementById('loadingContainer');
+            const tableContainer = document.getElementById('tableContainer');
+            
+            loadingContainer.style.display = 'block';
+            tableContainer.style.display = 'none';
+            
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    allData = data.data;
+                    filteredData = [...allData];
+                    displayData(filteredData);
+                    
+                    loadingContainer.style.display = 'none';
+                    tableContainer.style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'Gagal memuat data');
+                }
+                
+            } catch (error) {
+                loadingContainer.innerHTML = `
+                    <div class="error-message">
+                        <strong>❌ Error:</strong> ${error.message}
+                        <br><br>
+                        <button class="btn btn-refresh" onclick="loadData()">Coba Lagi</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayData(data) {
+            const tbody = document.getElementById('dataTableBody');
+            const totalDataEl = document.getElementById('totalData');
+            const filteredDataEl = document.getElementById('filteredData');
+            
+            totalDataEl.textContent = allData.length;
+            filteredDataEl.textContent = data.length;
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="29" class="no-data">Tidak ada data ditemukan</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                const ktpLink = row[13] ? `<a href="${row[13]}" target="_blank" style="color: #667eea; text-decoration: underline;">Lihat KTP</a>` : '-';
+                
+                // Format tanggal lahir (index 4)
+                const tanggalLahir = formatDate(row[4]);
+                
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${row[0]}</td>
+                    <td>${row[1]}</td>
+                    <td>${row[2]}</td>
+                    <td>${row[3]}</td>
+                    <td>${tanggalLahir}</td>
+                    <td>${row[5]}</td>
+                    <td>${row[6]}</td>
+                    <td>${row[7]}</td>
+                    <td>${row[8]}</td>
+                    <td>${row[9]}</td>
+                    <td>${row[10]}</td>
+                    <td>${row[11]}</td>
+                    <td>${row[12]}</td>
+                    <td>${ktpLink}</td>
+                    <td>${row[14]}</td>
+                    <td>${row[15]}</td>
+                    <td>${row[16]}</td>
+                    <td>${row[17]}</td>
+                    <td>${row[18]}</td>
+                    <td>${row[19]}</td>
+                    <td>${row[20]}</td>
+                    <td>${row[21]}</td>
+                    <td>${row[22]}</td>
+                    <td>${row[23]}</td>
+                    <td>${row[24]}</td>
+                    <td>${row[25]}</td>
+                    <td>${row[26]}</td>
+                    <td class="action-buttons">
+                        <button class="btn-view" onclick="viewDetail(${index})">👁️ Lihat</button>
+                        <button class="btn-delete" onclick="deleteData(${index})">🗑️ Hapus</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        }
+
+        function viewDetail(index) {
+            const row = filteredData[index];
+            const modalBody = document.getElementById('modalBody');
+            
+            // Format tanggal lahir
+            const tanggalLahir = formatDate(row[4]);
+            
+            modalBody.innerHTML = `
+                <div class="detail-group">
+                    <h3>📝 Data Pribadi</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Timestamp:</div>
+                        <div class="detail-value">${row[0]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">NIK:</div>
+                        <div class="detail-value">${row[1]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Nama Lengkap:</div>
+                        <div class="detail-value">${row[2]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tempat, Tanggal Lahir:</div>
+                        <div class="detail-value">${row[3]}, ${tanggalLahir}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Jenis Kelamin:</div>
+                        <div class="detail-value">${row[5]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Alamat:</div>
+                        <div class="detail-value">${row[6]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">RT / RW:</div>
+                        <div class="detail-value">${row[7]} / ${row[8]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kelurahan:</div>
+                        <div class="detail-value">${row[9]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kecamatan:</div>
+                        <div class="detail-value">${row[10]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kabupaten:</div>
+                        <div class="detail-value">${row[11]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Telepon:</div>
+                        <div class="detail-value">${row[12]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">KTP:</div>
+                        <div class="detail-value">${row[13] ? `<a href="${row[13]}" target="_blank" style="color: #667eea;">Lihat File KTP</a>` : '-'}</div>
+                    </div>
+                </div>
+
+                <div class="detail-group">
+                    <h3>🏢 Data Usaha</h3>
+                    <div class="detail-item">
+                        <div class="detail-label">Jenis Permohonan:</div>
+                        <div class="detail-value">${row[14]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Nama Usaha:</div>
+                        <div class="detail-value">${row[15]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">TPI:</div>
+                        <div class="detail-value">${row[16]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Alamat Usaha:</div>
+                        <div class="detail-value">${row[17]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">RT / RW Usaha:</div>
+                        <div class="detail-value">${row[18]} / ${row[19]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kelurahan Usaha:</div>
+                        <div class="detail-value">${row[20]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kecamatan Usaha:</div>
+                        <div class="detail-value">${row[21]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kabupaten Usaha:</div>
+                        <div class="detail-value">${row[22]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Telepon Usaha:</div>
+                        <div class="detail-value">${row[23]}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Jenis Izin:</div>
+                        <div class="detail-value">${row[24] || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Jenis Usaha:</div>
+                        <div class="detail-value">${row[25] || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kewajiban Retribusi:</div>
+                        <div class="detail-value">${row[26] || '-'}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async function deleteData(index) {
+            const row = filteredData[index];
+            const nik = row[1];
+            const nama = row[2];
+            
+            if (!confirm(`Apakah Anda yakin ingin menghapus data:\n\nNIK: ${nik}\nNama: ${nama}\n\nData yang dihapus tidak dapat dikembalikan!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ nik: nik })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showSuccessMessage('✓ Data berhasil dihapus!');
+                    loadData();
+                } else {
+                    alert('Gagal menghapus data: ' + result.message);
+                }
+                
+            } catch (error) {
+                alert('Terjadi kesalahan: ' + error.message);
+            }
+        }
+
+        function showSuccessMessage(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            
+            setTimeout(() => {
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function exportToExcel() {
+            // Convert table to CSV
+            let csv = [];
+            const table = document.getElementById('dataTable');
+            const rows = table.querySelectorAll('tr');
+            
+            for (let row of rows) {
+                let cols = row.querySelectorAll('td, th');
+                let csvRow = [];
+                for (let i = 0; i < cols.length - 1; i++) { // Exclude action column
+                    csvRow.push('"' + cols[i].textContent.replace(/"/g, '""') + '"');
+                }
+                csv.push(csvRow.join(','));
+            }
+            
+            // Download CSV
+            const csvContent = csv.join('\n');
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Data_Retribusi_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showSuccessMessage('✓ Data berhasil di-export!');
+        }
+    </script>
+</body>
+</html>
